@@ -2,13 +2,13 @@
 #include <sourcemod>
 #pragma newdecls required
 
-ArrayList cmds, links;
+ArrayList cmds, links, customs;
 
 public Plugin myinfo = {
-	name = "[SM] Custom Commands/Links",
-	author = "poonit",
+	name = "TF2 Custom Commands/Links",
+	author = "poonit & Nicklas Vedsted",
 	description = "Create custom links for players using MOTD!",
-	version = "1.0",
+	version = "1.1.0",
 	url = "https://steamcommunity.com/id/kenmaskimmeod/"
 };
 
@@ -18,6 +18,7 @@ public void OnPluginStart()
 
     cmds = new ArrayList(ByteCountToCells(64));
     links = new ArrayList(ByteCountToCells(512));
+    customs = new ArrayList(1);
 
     if(!CreateCommands())
     {
@@ -45,6 +46,7 @@ bool CreateCommands()
         cmds.PushString(sCmd);
         kv.GetString("link", sLink, sizeof(sLink));
         links.PushString(sLink);
+        customs.Push(kv.GetNum("custom", 0));
         RegConsoleCmd(sCmd, Cmd_Link);
     }
     while (kv.GotoNextKey());
@@ -58,15 +60,18 @@ public Action Cmd_Link(int client, int args)
 {
     char sCmd[64], sLink[512];
     GetCmdArg(0, sCmd, sizeof(sCmd));
-    links.GetString(cmds.FindString(sCmd), sLink, sizeof(sLink));
-    ShowLink(client, sLink);
+    int index = cmds.FindString(sCmd);
+    links.GetString(index, sLink, sizeof(sLink));
+    bool custom = customs.Get(index);
+    ShowLink(client, sLink, custom);
     return Plugin_Handled;
 }
 
 public Action Cmd_Reload(int client, int args)
 {
-    cmds = new ArrayList(ByteCountToCells(64));
-    links = new ArrayList(ByteCountToCells(512));
+    cmds.Clear();
+    links.Clear();
+    customs.Clear();
 
     if(CreateCommands())
     {
@@ -80,12 +85,15 @@ public Action Cmd_Reload(int client, int args)
     return Plugin_Handled;
 }
 
-void ShowLink(const int client, const char[] link)
+void ShowLink(const int client, const char[] link, bool custom)
 {
     KeyValues kv = new KeyValues("data");
     kv.SetString("title", "Link");
     kv.SetNum("type", MOTDPANEL_TYPE_URL);
     kv.SetString("msg", link);
+    if (custom) {
+        kv.SetNum("customsvr", 1);
+    }
     ShowVGUIPanel(client, "info", kv, true);
     delete kv;
 }
